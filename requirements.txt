@@ -1,15 +1,23 @@
-streamlit
-torch
-torchaudio
-openai-whisper
-rapidfuzz
+# Core app
+streamlit>=1.28.0
+
+# Data & utilities
 numpy
 pandas
-librosa
-soundfile
 plotly
-streamlit-mic-recorder
-streamlit-webrtc
-av
-opencv-python
-pydub
+rapidfuzz
+
+# Article processing
+requests
+
+# Optional: only needed if using local Whisper model
+# torch
+# torchaudio
+# openai-whisper
+# librosa
+# soundfile
+# streamlit-mic-recorder
+# streamlit-webrtc
+# av
+# opencv-python
+# pydub
