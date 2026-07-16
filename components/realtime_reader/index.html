@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ReadingAI Real-Time Coach</title>
+  <script src="https://unpkg.com/streamlit-component-lib@2.0.0/dist/streamlit-component-lib.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      background:#0f172a;
+      color:#e2e8f0;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      padding:12px;
+      gap:8px;
+    }
+
+    /* ── Stats Row ──────────────────────────────── */
+    .stats-row{
+      display:flex;
+      gap:8px;
+      flex-shrink:0;
+    }
+    .stat-card{
+      flex:1;
+      background:#1e293b;
+      border:1px solid #334155;
+      border-radius:10px;
+      padding:7px 10px;
+      text-align:center;
+    }
+    .stat-value{
+      font-size:1.25rem;
+      font-weight:800;
+      color:#38bdf8;
+      line-height:1.2;
+    }
+    .stat-label{
+      font-size:0.6rem;
+      color:#64748b;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    /* ── Progress ───────────────────────────────── */
+    .progress-track{
+      width:100%;
+      height:5px;
+      background:#1e293b;
+      border-radius:3px;
+      overflow:hidden;
+      flex-shrink:0;
+    }
+    .progress-fill{
+      height:100%;
+      background:linear-gradient(90deg,#6366f1,#38bdf8);
+      border-radius:3px;
+      width:0%;
+      transition:width 0.4s ease;
+    }
+
+    /* ── Heard row ──────────────────────────────── */
+    .heard-row{
+      background:#0f172a;
+      border:1px solid #1e293b;
+      border-radius:8px;
+      padding:5px 14px;
+      font-size:.82rem;
+      color:#475569;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-shrink:0;
+      min-height:32px;
+    }
+    .heard-word{color:#38bdf8;font-weight:600;}
+
+    /* ── Article Box ────────────────────────────── */
+    .article-wrap{
+      position:relative;
+      flex:1;
+      min-height:0;
+    }
+    .article-box{
+      width:100%;
+      height:100%;
+      background:#1e293b;
+      border:1px solid #334155;
+      border-radius:12px;
+      padding:16px 20px;
+      overflow-y:auto;
+      line-height:2.4;
+      font-size:1.1rem;
+    }
+
+    /* ── Word tokens ────────────────────────────── */
+    .w{
+      display:inline;
+      padding:1px 3px;
+      border-radius:4px;
+      transition:all .2s ease;
+    }
+    .w.wait{color:#94a3b8;}
+    .w.active{
+      background:rgba(251,191,36,.18);
+      color:#fbbf24;
+      font-weight:700;
+      border-bottom:2.5px solid #fbbf24;
+      animation:wblink .85s ease-in-out infinite;
+    }
+    .w.ok{
+      color:#4ade80;
+      background:rgba(74,222,128,.1);
+    }
+    .w.bad{
+      color:#f87171;
+      background:rgba(248,113,113,.12);
+      animation:shake .35s ease;
+    }
+    .w.skip{
+      color:#fb923c;
+      background:rgba(251,146,60,.1);
+      text-decoration:underline dotted #fb923c;
+    }
+
+    @keyframes wblink{
+      0%,100%{box-shadow:0 2px 0 0 #fbbf24;}
+      50%{box-shadow:0 2px 0 0 rgba(251,191,36,0),0 0 12px 4px rgba(251,191,36,.3);}
+    }
+    @keyframes shake{
+      0%,100%{transform:translateX(0);}
+      20%{transform:translateX(-5px);}
+      60%{transform:translateX(5px);}
+    }
+
+    /* ── Results Overlay ────────────────────────── */
+    .overlay{
+      display:none;
+      position:absolute;
+      inset:0;
+      background:rgba(15,23,42,.96);
+      border-radius:12px;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      text-align:center;
+      z-index:10;
+    }
+    .overlay.show{display:flex;}
+    .res-pct{
+      font-size:3.8rem;
+      font-weight:900;
+      background:linear-gradient(135deg,#4ade80,#38bdf8);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      line-height:1;
+      margin-bottom:6px;
+    }
+    .res-grade{font-size:1.15rem;color:#94a3b8;margin-bottom:18px;}
+    .res-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      width:100%;
+      max-width:290px;
+      margin-bottom:18px;
+    }
+    .rg{background:#1e293b;border-radius:10px;padding:10px;}
+    .rg-val{font-size:1.35rem;font-weight:800;}
+    .rg-lbl{font-size:.65rem;color:#64748b;text-transform:uppercase;margin-top:2px;}
+    .btn-done{
+      background:linear-gradient(135deg,#22c55e,#16a34a);
+      color:#fff;
+      padding:11px 30px;
+      border:none;
+      border-radius:10px;
+      font-size:.95rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:all .2s;
+    }
+    .btn-done:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(34,197,94,.4);}
+
+    /* ── Error Box ──────────────────────────────── */
+    .err-box{
+      background:rgba(239,68,68,.08);
+      border:1px solid rgba(239,68,68,.35);
+      border-radius:8px;
+      padding:7px 14px;
+      font-size:.82rem;
+      color:#f87171;
+      text-align:center;
+      min-height:33px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-shrink:0;
+      transition:opacity .3s;
+    }
+    .err-box.hidden{opacity:0;pointer-events:none;}
+
+    /* ── Controls ───────────────────────────────── */
+    .controls-row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-shrink:0;
+    }
+    .mic-dot{
+      width:40px;height:40px;
+      border-radius:50%;
+      background:#1e293b;
+      border:2px solid #334155;
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.1rem;
+      flex-shrink:0;
+      transition:all .3s;
+    }
+    .mic-dot.on{
+      background:rgba(239,68,68,.15);
+      border-color:#ef4444;
+      animation:micring 1.5s ease-in-out infinite;
+    }
+    @keyframes micring{
+      0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.3);}
+      50%{box-shadow:0 0 0 9px rgba(239,68,68,0);}
+    }
+    .btn{
+      padding:9px 0;
+      border:none;
+      border-radius:8px;
+      font-size:.88rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:all .2s;
+      flex:1;
+    }
+    .btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+    .btn-s{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;}
+    .btn-s:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(99,102,241,.4);}
+    .btn-k{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;}
+    .btn-k:not(:disabled):hover{transform:translateY(-1px);}
+    .btn-t{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
+    .btn-t:not(:disabled):hover{transform:translateY(-1px);}
+
+    /* scrollbar */
+    .article-box::-webkit-scrollbar{width:5px;}
+    .article-box::-webkit-scrollbar-track{background:#0f172a;}
+    .article-box::-webkit-scrollbar-thumb{background:#334155;border-radius:3px;}
+  </style>
+</head>
+<body>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-value" id="s-acc">—</div>
+    <div class="stat-label">Accuracy</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="s-ok" style="color:#4ade80">0</div>
+    <div class="stat-label">✅ Correct</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="s-err" style="color:#f87171">0</div>
+    <div class="stat-label">❌ Errors</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="s-wpm">—</div>
+    <div class="stat-label">WPM</div>
+  </div>
+</div>
+
+<!-- Progress -->
+<div class="progress-track"><div class="progress-fill" id="pg"></div></div>
+
+<!-- Heard -->
+<div class="heard-row">
+  🎙️&nbsp;
+  <span id="heard" class="heard-word">Click "Start Reading" to begin...</span>
+</div>
+
+<!-- Article + Overlay -->
+<div class="article-wrap">
+  <div class="article-box" id="article-box">
+    <em style="color:#475569">Article will appear here once loaded.</em>
+  </div>
+
+  <!-- Results Overlay -->
+  <div class="overlay" id="overlay">
+    <div class="res-pct" id="res-pct">—%</div>
+    <div class="res-grade" id="res-grade"></div>
+    <div class="res-grid">
+      <div class="rg">
+        <div class="rg-val" id="res-ok" style="color:#4ade80">0</div>
+        <div class="rg-lbl">Correct</div>
+      </div>
+      <div class="rg">
+        <div class="rg-val" id="res-err" style="color:#f87171">0</div>
+        <div class="rg-lbl">Errors</div>
+      </div>
+      <div class="rg">
+        <div class="rg-val" id="res-sk" style="color:#fb923c">0</div>
+        <div class="rg-lbl">Skipped</div>
+      </div>
+      <div class="rg">
+        <div class="rg-val" id="res-wpm" style="color:#38bdf8">0</div>
+        <div class="rg-lbl">WPM</div>
+      </div>
+    </div>
+    <button class="btn-done" onclick="sendResult()">📊 View Full Dashboard →</button>
+  </div>
+</div>
+
+<!-- Error feedback -->
+<div class="err-box hidden" id="err-box">&nbsp;</div>
+
+<!-- Controls -->
+<div class="controls-row">
+  <div class="mic-dot" id="mic-dot">🎙️</div>
+  <button class="btn btn-s" id="btn-s" onclick="startReading()">🎙 Start Reading</button>
+  <button class="btn btn-k" id="btn-k" onclick="skipWord()" disabled>⏭ Skip</button>
+  <button class="btn btn-t" id="btn-t" onclick="stopReading()" disabled>⏹ Stop</button>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let words = [], elems = [], statuses = [];
+let cur = 0, nOk = 0, nErr = 0, nSkip = 0;
+let t0 = null, recog = null, listening = false;
+let wrongStreak = 0, errTimer = null, initDone = false;
+let wordResults = [];
+let lastResult = null;
+
+// ── Levenshtein similarity ───────────────────────────────────
+function lev(a, b) {
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const dp = Array.from({length: b.length + 1}, (_, i) => i);
+  for (let j = 0; j < a.length; j++) {
+    let prev = dp[0];
+    dp[0] = j + 1;
+    for (let i = 1; i <= b.length; i++) {
+      const tmp = dp[i];
+      dp[i] = a[j] === b[i-1] ? prev : 1 + Math.min(prev, dp[i], dp[i-1]);
+      prev = tmp;
+    }
+  }
+  return dp[b.length];
+}
+
+function sim(a, b) {
+  a = a.toLowerCase().replace(/[^a-z']/g, '');
+  b = b.toLowerCase().replace(/[^a-z']/g, '');
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  return Math.round((1 - lev(a, b) / Math.max(a.length, b.length)) * 100);
+}
+
+// ── Render article ───────────────────────────────────────────
+function render(ws) {
+  words = ws;
+  statuses = new Array(ws.length).fill('wait');
+  wordResults = [];
+  cur = nOk = nErr = nSkip = wrongStreak = 0;
+  lastResult = null;
+  t0 = null;
+
+  const box = document.getElementById('article-box');
+  box.innerHTML = '';
+  elems = [];
+
+  ws.forEach((w, i) => {
+    const sp = document.createElement('span');
+    sp.className = 'w wait';
+    sp.id = 'wd' + i;
+    sp.textContent = w;
+    box.appendChild(sp);
+    box.appendChild(document.createTextNode(' '));
+    elems.push(sp);
+  });
+
+  activate(0);
+  updateStats();
+  updateProgress();
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('err-box').classList.add('hidden');
+}
+
+function activate(i) {
+  if (i >= 0 && i < elems.length) {
+    elems[i].className = 'w active';
+    statuses[i] = 'active';
+    elems[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function setW(i, cls) {
+  if (i < 0 || i >= elems.length) return;
+  statuses[i] = cls;
+  elems[i].className = 'w ' + cls;
+}
+
+// ── Speech recognition ───────────────────────────────────────
+function startReading() {
+  if (!words.length) { showErr('⚠️ No article loaded. Please select an article first.'); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showErr('❌ Speech recognition not supported. Please use Chrome or Edge.'); return; }
+
+  listening = true;
+  t0 = Date.now();
+  wrongStreak = 0;
+
+  document.getElementById('btn-s').disabled = true;
+  document.getElementById('btn-k').disabled = false;
+  document.getElementById('btn-t').disabled = false;
+  document.getElementById('mic-dot').classList.add('on');
+  setHeard('Listening... Speak the highlighted word');
+
+  recog = new SR();
+  recog.continuous = true;
+  recog.interimResults = true;
+  recog.lang = 'en-US';
+  recog.maxAlternatives = 3;
+
+  recog.onresult = onSpeech;
+  recog.onerror = (e) => {
+    if (e.error === 'not-allowed') showErr('❌ Microphone access denied. Allow mic in browser settings.');
+    else if (e.error !== 'no-speech' && e.error !== 'aborted') showErr('Speech error: ' + e.error);
+  };
+  recog.onend = () => { if (listening) { try { recog.start(); } catch(_){} } };
+
+  recog.start();
+}
+
+function onSpeech(evt) {
+  if (cur >= words.length) return;
+
+  const res = evt.results[evt.results.length - 1];
+  const transcript = res[0].transcript.trim();
+  setHeard('"' + transcript + '"');
+
+  const spokenArr = transcript.toLowerCase().split(/\s+/).filter(Boolean);
+
+  if (!res.isFinal) {
+    // Interim: check last word against current
+    const lastW = spokenArr[spokenArr.length - 1];
+    if (lastW && cur < words.length) {
+      const s = sim(lastW, words[cur]);
+      // High confidence interim match → advance immediately
+      if (s >= 92 && statuses[cur] !== 'ok') {
+        doCorrect(cur, lastW, words[cur], s);
+      }
+    }
+  } else {
+    // Final: process each word in order
+    for (const sw of spokenArr) {
+      if (cur >= words.length) break;
+      if (statuses[cur] === 'ok') { cur++; continue; }  // already matched in interim
+
+      const expected = words[cur];
+      const s = sim(sw, expected);
+
+      if (s >= 85) {
+        doCorrect(cur, sw, expected, s);
+      } else {
+        doWrong(cur, sw, expected, s);
+        break;  // Stop — wait for user to retry or skip
+      }
+    }
+  }
+}
+
+function doCorrect(i, spoken, expected, s) {
+  setW(i, 'ok');
+  nOk++;
+  wrongStreak = 0;
+  clearErr();
+
+  // Remove any previous wrong result for this word
+  wordResults = wordResults.filter(r => r.index !== i);
+  wordResults.push({ index: i, expected, spoken, status: 'correct', similarity: s });
+
+  cur = Math.max(cur, i + 1);
+  if (cur < words.length) activate(cur);
+  updateStats();
+  updateProgress();
+
+  if (cur >= words.length) finish();
+}
+
+function doWrong(i, spoken, expected, s) {
+  setW(i, 'bad');
+  nErr++;
+  wrongStreak++;
+
+  wordResults = wordResults.filter(r => r.index !== i);
+  wordResults.push({ index: i, expected, spoken, status: 'wrong', similarity: s });
+
+  showErr('❌ Heard: "' + spoken + '"   ·   Expected: "' + expected + '"   →  Say it again or skip ⏭');
+  updateStats();
+
+  // Auto-skip after 3 consecutive wrong attempts on same word
+  if (wrongStreak >= 3) {
+    clearTimeout(errTimer);
+    errTimer = setTimeout(() => {
+      if (cur === i && statuses[i] === 'bad') skipWord();
+    }, 1500);
+  }
+}
+
+function skipWord() {
+  if (cur >= words.length || !listening) return;
+  const expected = words[cur];
+
+  setW(cur, 'skip');
+  nSkip++;
+  wrongStreak = 0;
+  clearErr();
+
+  wordResults = wordResults.filter(r => r.index !== cur);
+  wordResults.push({ index: cur, expected, spoken: '', status: 'skipped', similarity: 0 });
+
+  cur++;
+  if (cur < words.length) activate(cur);
+  updateStats();
+  updateProgress();
+
+  if (cur >= words.length) finish();
+}
+
+function stopReading() {
+  listening = false;
+  if (recog) { try { recog.stop(); } catch(_){} }
+  resetControls();
+  if (nOk > 0 || cur > 0) finish();
+}
+
+function finish() {
+  listening = false;
+  if (recog) { try { recog.stop(); } catch(_){} }
+  resetControls();
+
+  const elapsed = t0 ? (Date.now() - t0) / 1000 : 1;
+  const total = words.length;
+  const acc = Math.round((nOk / total) * 100);
+  const wpm = Math.round((nOk / elapsed) * 60);
+
+  // Mark any remaining words as skipped
+  for (let i = cur; i < words.length; i++) {
+    if (statuses[i] === 'wait' || statuses[i] === 'active') {
+      setW(i, 'skip');
+      wordResults.push({ index: i, expected: words[i], spoken: '', status: 'skipped', similarity: 0 });
+      nSkip++;
+    }
+  }
+
+  // Sort results by index
+  wordResults.sort((a, b) => a.index - b.index);
+
+  lastResult = {
+    accuracy: acc, wpm, reading_time_sec: Math.round(elapsed),
+    total_words: total, correct_words: nOk,
+    error_words: nErr, skipped_words: nSkip,
+    word_results: wordResults, finished: true
+  };
+
+  const grade = acc >= 90 ? '🌟 Excellent!' : acc >= 75 ? '👍 Good Job!' : acc >= 50 ? '📖 Keep Practicing!' : '💪 Try Again!';
+  document.getElementById('res-pct').textContent = acc + '%';
+  document.getElementById('res-grade').textContent = grade;
+  document.getElementById('res-ok').textContent = nOk;
+  document.getElementById('res-err').textContent = nErr;
+  document.getElementById('res-sk').textContent = nSkip;
+  document.getElementById('res-wpm').textContent = wpm;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function sendResult() {
+  if (lastResult) Streamlit.setComponentValue(lastResult);
+}
+
+// ── UI Helpers ───────────────────────────────────────────────
+function resetControls() {
+  document.getElementById('btn-s').disabled = false;
+  document.getElementById('btn-k').disabled = true;
+  document.getElementById('btn-t').disabled = true;
+  document.getElementById('mic-dot').classList.remove('on');
+}
+
+function setHeard(msg) { document.getElementById('heard').textContent = msg; }
+
+function showErr(msg) {
+  const b = document.getElementById('err-box');
+  b.textContent = msg;
+  b.classList.remove('hidden');
+  clearTimeout(errTimer);
+  errTimer = setTimeout(() => b.classList.add('hidden'), 6000);
+}
+
+function clearErr() {
+  clearTimeout(errTimer);
+  document.getElementById('err-box').classList.add('hidden');
+}
+
+function updateProgress() {
+  document.getElementById('pg').style.width = (words.length ? (cur / words.length * 100) : 0) + '%';
+}
+
+function updateStats() {
+  const done = nOk + nErr;
+  document.getElementById('s-ok').textContent = nOk;
+  document.getElementById('s-err').textContent = nErr;
+  document.getElementById('s-acc').textContent = done ? Math.round(nOk / done * 100) + '%' : '—';
+  if (t0 && nOk > 0) {
+    document.getElementById('s-wpm').textContent = Math.round(nOk / ((Date.now() - t0) / 60000));
+  } else {
+    document.getElementById('s-wpm').textContent = '—';
+  }
+}
+
+// ── Streamlit bridge ─────────────────────────────────────────
+function onRender(event) {
+  const data = event.detail;
+  if (data && data.args && Array.isArray(data.args.article_words)) {
+    const newWords = data.args.article_words;
+    // Only re-render if article changes
+    if (!initDone || JSON.stringify(newWords) !== JSON.stringify(words)) {
+      initDone = true;
+      render(newWords);
+    }
+  }
+  Streamlit.setFrameHeight(document.body.scrollHeight);
+}
+
+Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
+Streamlit.setComponentReady();
+</script>
+</body>
+</html>

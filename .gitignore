@@ -1,0 +1,54 @@
+# Python virtual environment
+env/
+venv/
+.venv/
+ENV/
+
+# ML Models (large files - too big for GitHub)
+models/
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Environment variables
+.env
+
+# Streamlit
+.streamlit/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Uploaded files (user content)
+uploads/
+
+# AI model outputs
+outputs/
+
+# Audio recordings
+audio/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/

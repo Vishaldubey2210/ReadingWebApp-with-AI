@@ -1,0 +1,15 @@
+streamlit
+torch
+torchaudio
+openai-whisper
+rapidfuzz
+numpy
+pandas
+librosa
+soundfile
+plotly
+streamlit-mic-recorder
+streamlit-webrtc
+av
+opencv-python
+pydub

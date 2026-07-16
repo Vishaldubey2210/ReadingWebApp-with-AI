@@ -1,0 +1,19 @@
+name: ReadingAI
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - streamlit
+      - torch
+      - torchaudio
+      - openai-whisper
+      - rapidfuzz
+      - numpy
+      - pandas
+      - librosa
+      - soundfile
+      - plotly
+      - streamlit-mic-recorder
