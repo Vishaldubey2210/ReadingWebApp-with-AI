@@ -1,0 +1,13 @@
+{
+    "id": "dinosaurs_easy",
+    "title": "The Dinosaurs",
+    "author": "History Team",
+    "source": "educational",
+    "category": "history",
+    "difficulty": "easy",
+    "language": "en",
+    "tags": [
+        "animals",
+        "past"
+    ]
+}

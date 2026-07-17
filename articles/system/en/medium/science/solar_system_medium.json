@@ -1,0 +1,13 @@
+{
+    "id": "solar_system_medium",
+    "title": "Our Solar System",
+    "author": "Science Team",
+    "source": "educational",
+    "category": "science",
+    "difficulty": "medium",
+    "language": "en",
+    "tags": [
+        "space",
+        "planets"
+    ]
+}

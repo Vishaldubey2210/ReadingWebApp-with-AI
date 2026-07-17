@@ -354,6 +354,17 @@ function submitResult(){{
           if(inp.placeholder&&inp.placeholder.includes('finished')){{
             inp.value=payload;
             inp.dispatchEvent(new Event('input',{{bubbles:true}}));
+            
+            // Find the submit button in the same form and click it automatically
+            const form = inp.closest('form');
+            if(form) {{
+                const btn = form.querySelector('button[type="submit"]');
+                if(btn) setTimeout(()=>btn.click(), 100);
+            }} else {{
+                // Fallback for newer Streamlit DOM structures
+                const btnContainer = f.contentDocument.querySelector('button[kind="primaryFormSubmit"]');
+                if(btnContainer) setTimeout(()=>btnContainer.click(), 100);
+            }}
             break;}}}}}}catch(_){{}}}}}}catch(_){{}}
   // Fallback: copy to clipboard so user can paste manually
   if(navigator.clipboard){{

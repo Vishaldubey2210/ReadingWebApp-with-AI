@@ -164,8 +164,14 @@ def realtime_reading_section():
     realtime_reader(article_words=article_words)
 
     # ── Result submission form below the component ─────────────
-    st.markdown("---")
-    st.caption("📋 When done reading, paste the result JSON here and click Submit:")
+    # Hidden form for automatic submission by JS
+    st.markdown(
+        """<style>
+        /* Hide the manual result form completely */
+        [data-testid="stForm"] { display: none !important; }
+        </style>""", 
+        unsafe_allow_html=True
+    )
 
     with st.form("reading_result_form", clear_on_submit=True):
         raw_json = st.text_area(
