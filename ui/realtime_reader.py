@@ -137,6 +137,10 @@ function lev(a,b){{if(!a.length)return b.length;if(!b.length)return a.length;
 function sim(a,b){{
   a=a.toLowerCase().replace(/[^a-z']/g,'');b=b.toLowerCase().replace(/[^a-z']/g,'');
   if(!a||!b)return 0;if(a===b)return 100;
+  if(a+'s'===b || b+'s'===a) return 95;
+  if(a+'d'===b || b+'d'===a) return 95;
+  if(a+'ed'===b || b+'ed'===a) return 95;
+  if(a+'ing'===b || b+'ing'===a) return 90;
   return Math.round((1-lev(a,b)/Math.max(a.length,b.length))*100);}}
 
 (function init(){{
@@ -172,10 +176,32 @@ function startR(){{
   recog=new SR();recog.continuous=true;recog.interimResults=true;
   recog.lang='en-US';recog.maxAlternatives=3;
   recog.onresult=onSp;
+  let netRetries=0;
   recog.onerror=(e)=>{{
-    if(e.error==='not-allowed')showE('Microphone access denied. Click 🔒 in address bar to allow.');
-    else if(e.error!=='no-speech'&&e.error!=='aborted')showE('Speech error: '+e.error);}};
-  recog.onend=()=>{{if(listen){{try{{recog.start();}}catch(_){{}}}} }};
+    if(e.error==='not-allowed'){{
+      showE('🔒 Microphone access denied. Click the lock icon in the address bar to allow.');
+      listen=false;rCtrl();
+    }} else if(e.error==='network'){{
+      // Network blip — silently retry instead of showing error
+      netRetries++;
+      if(netRetries<=5){{
+        setHd('🔄 Reconnecting... ('+ netRetries +'/5)');
+        setTimeout(()=>{{
+          if(listen){{try{{recog.stop();}}catch(_){{}}}}
+        }},800);
+      }} else {{
+        showE('❌ Network error — please check your internet and click Start Reading again.');
+        listen=false;rCtrl();
+      }}
+    }} else if(e.error!=='no-speech'&&e.error!=='aborted'){{
+      showE('⚠️ Speech error: '+e.error+' — retrying...');
+    }}
+  }};
+  recog.onend=()=>{{
+    if(listen){{
+      try{{recog.start();netRetries=0;}}catch(_){{}}
+    }}
+  }};
   recog.start();}}
 
 const bzSnd = new Audio('data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YUAGAAAAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPYAACNJztLjWe7ef9/u3mNZztLjScAAHPYxbRzmEWGAYBFhnOYxbRz2AAAjSc7S41nu3n/f7t5jWc7S40nAABz2MW0c5hFhgGARYZzmMW0c9gAAI0nO0uNZ7t5/3+7eY1nO0uNJwAAc9jFtHOYRYYBgEWGc5jFtHPY');
@@ -188,27 +214,56 @@ function playBuzz(){{
 
 function onSp(ev){{
   if(cur>=WDS.length)return;
-  const r=ev.results[ev.results.length-1];
-  const tr=r[0].transcript.trim();
-  setHd('"'+tr+'"');
-  const arr=tr.toLowerCase().split(/\s+/).filter(Boolean);
   
-  // Process all words in the transcript immediately (fixes latency!)
-  let localCur=cur;
-  for(const sw of arr){{
-    if(localCur>=WDS.length)break;
-    if(st2[localCur]==='ok'){{localCur++;continue;}}
+  // Combine unfinalized and final transcripts for a complete picture
+  let tr = '';
+  for(let i=ev.resultIndex; i<ev.results.length; i++) {{
+     tr += ev.results[i][0].transcript + ' ';
+  }}
+  tr = tr.trim();
+  if(tr) setHd('🎙️ "'+tr+'"');
+  
+  const arr=tr.toLowerCase().split(/\s+/).filter(Boolean);
+  const isFinal = ev.results[ev.results.length-1].isFinal;
+  
+  let matchedAny = false;
+  
+  for(let i=0; i<arr.length; i++){{
+    const sw = arr[i];
+    if(cur>=WDS.length) break;
+    if(st2[cur]==='ok') continue;
     
-    const exp=WDS[localCur],s=sim(sw,exp);
-    // Lowered threshold to 75% for much faster, optimized matching
-    if(s>=75){{
-      doOk(localCur,sw,exp,s);
-      localCur=cur; // update local pointer since doOk advances cur
-    }}else if(r.isFinal){{
-      // Only flag error on final result to prevent false alarms while speaking
-      doBad(localCur,sw,exp,s);
-      break;
+    // Lookahead window: check current word and next 2 words to handle fast reading or skips
+    let bestMatchIdx = -1;
+    let bestMatchScore = 0;
+    
+    for(let j=0; j<=2; j++){{
+      if(cur+j >= WDS.length) break;
+      const exp = WDS[cur+j];
+      const s = sim(sw, exp);
+      if(s >= 70 && s > bestMatchScore){{
+        bestMatchScore = s;
+        bestMatchIdx = cur+j;
+      }}
     }}
+    
+    if(bestMatchIdx !== -1){{
+      // If we matched a future word, mark intermediate words as skipped
+      while(cur < bestMatchIdx){{
+         setW(cur, 'skip');
+         wR.push({{index:cur, expected:WDS[cur], spoken:'', status:'skipped', similarity:0}});
+         nSk++;
+         cur++;
+      }}
+      doOk(cur, sw, WDS[cur], bestMatchScore);
+      matchedAny = true;
+    }}
+  }}
+  
+  // If no words matched and the speech segment is final, flag an error
+  if(!matchedAny && isFinal && arr.length > 0){{
+     const lastWord = arr[arr.length-1];
+     doBad(cur, lastWord, WDS[cur], sim(lastWord, WDS[cur]));
   }}
 }}
 
