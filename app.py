@@ -58,24 +58,7 @@ st.set_page_config(
 )
 
 # ==========================================================
-# VENV GUARD (path-based — zero import cost, no torch crash)
-# Checks sys.executable path instead of eagerly importing
-# torch/faster_whisper (which would cause the Generic TypeError)
-# ==========================================================
-_VENV_PYTHON = os.path.normpath(r"D:\ReadingAI\env")
-_is_venv = os.path.normpath(sys.executable).startswith(_VENV_PYTHON)
-
-if not _is_venv:
-    st.error(
-        "**ReadingAI must be started with the virtual environment Python.**\n\n"
-        "Open a terminal in `D:\\ReadingAI` and run:\n\n"
-        "```\nrun.bat\n```\n\n"
-        f"Current Python: `{sys.executable}`"
-    )
-    st.stop()
-
-# ==========================================================
-# APP IMPORTS (safe — only reached when in correct venv)
+# APP IMPORTS
 # ==========================================================
 from ui.home import show_home          # noqa: E402
 from ui.Dashboard import show_dashboard  # noqa: E402
