@@ -5,7 +5,7 @@ venv/
 ENV/
 
 # ML Models (large files - too big for GitHub)
-models/
+/models/
 *.pt
 *.pth
 *.bin
