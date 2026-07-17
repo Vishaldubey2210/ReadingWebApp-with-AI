@@ -10,15 +10,6 @@ import io
 import streamlit as st
 from pathlib import Path
 
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.lib import colors
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer,
-    Table, TableStyle, HRFlowable,
-)
-
 from core.scoring import ReadingResult
 
 
@@ -52,78 +43,6 @@ def _metric_card(col, label: str, value: str, delta: str = "", color: str = "") 
     with col:
         st.metric(label=label, value=value, delta=delta or None)
 
-
-def _build_pdf(result: ReadingResult) -> bytes:
-    """Generates a PDF report using reportlab and returns raw bytes."""
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            rightMargin=2*cm, leftMargin=2*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    elements = []
-
-    # Title
-    title_style = ParagraphStyle("Title", parent=styles["Title"],
-                                 fontSize=20, spaceAfter=6)
-    elements.append(Paragraph("📖 ReadingAI — Session Report", title_style))
-    elements.append(Paragraph(f"Article: <b>{result.article_title or result.article_id}</b>",
-                               styles["Normal"]))
-    elements.append(Spacer(1, 0.4*cm))
-    elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
-    elements.append(Spacer(1, 0.4*cm))
-
-    # Summary table
-    summary_data = [
-        ["Metric", "Value"],
-        ["Accuracy",          f"{result.accuracy:.1f}%"],
-        ["Reading Speed",     f"{result.wpm:.0f} WPM"],
-        ["Reading Time",      f"{result.reading_time_sec:.1f} s"],
-        ["Total Words",       str(result.total_words)],
-        ["Correct Words",     str(result.correct_words)],
-        ["Skipped Words",     str(result.skipped_words)],
-        ["Substituted Words", str(result.substituted_words)],
-        ["Inserted Words",    str(result.inserted_words)],
-    ]
-    t = Table(summary_data, colWidths=[8*cm, 6*cm])
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
-        ("TEXTCOLOR",  (0, 0), (-1, 0), colors.white),
-        ("FONTNAME",   (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("PADDING", (0, 0), (-1, -1), 6),
-    ]))
-    elements.append(t)
-    elements.append(Spacer(1, 0.6*cm))
-
-    # Word-by-word table
-    elements.append(Paragraph("<b>Word-by-Word Analysis</b>", styles["Heading2"]))
-    elements.append(Spacer(1, 0.2*cm))
-    word_header = ["#", "Expected", "Spoken", "Status", "Score"]
-    word_rows   = [word_header]
-    for a in result.alignments:
-        word_rows.append([
-            str(a.index + 1),
-            a.expected,
-            a.spoken if a.spoken else "—",
-            a.status.capitalize(),
-            f"{a.similarity:.0f}",
-        ])
-    wt = Table(word_rows, colWidths=[1*cm, 4*cm, 4*cm, 3*cm, 2*cm])
-    wt.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
-        ("TEXTCOLOR",  (0, 0), (-1, 0), colors.white),
-        ("FONTNAME",   (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f9ff")]),
-        ("GRID", (0, 0), (-1, -1), 0.3, colors.lightgrey),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("PADDING", (0, 0), (-1, -1), 4),
-    ]))
-    elements.append(wt)
-
-    doc.build(elements)
-    return buf.getvalue()
 
 
 def show_dashboard() -> None:
@@ -210,17 +129,7 @@ def show_dashboard() -> None:
         )
 
     with col_pdf:
-        try:
-            pdf_bytes = _build_pdf(result)
-            st.download_button(
-                "📑 Download PDF",
-                data=pdf_bytes,
-                file_name=f"result_{result.article_id}.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-            )
-        except Exception as e:
-            st.warning(f"PDF generation failed: {e}")
+        st.info("PDF download is disabled in the cloud version.")
 
     with col_back:
         if st.button("⬅ Back to Reading", use_container_width=True):
