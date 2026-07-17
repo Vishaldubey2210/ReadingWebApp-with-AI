@@ -182,17 +182,9 @@ function startR(){{
       showE('🔒 Microphone access denied. Click the lock icon in the address bar to allow.');
       listen=false;rCtrl();
     }} else if(e.error==='network'){{
-      // Network blip — silently retry instead of showing error
-      netRetries++;
-      if(netRetries<=5){{
-        setHd('🔄 Reconnecting... ('+ netRetries +'/5)');
-        setTimeout(()=>{{
-          if(listen){{try{{recog.stop();}}catch(_){{}}}}
-        }},800);
-      }} else {{
-        showE('❌ Network error — please check your internet and click Start Reading again.');
-        listen=false;rCtrl();
-      }}
+      // In cloud iframes, Chrome often throws 'network' instead of 'no-speech' on silence.
+      // Silently stop so onend can restart it without flashing error messages.
+      if(listen){{try{{recog.stop();}}catch(_){{}}}}
     }} else if(e.error!=='no-speech'&&e.error!=='aborted'){{
       showE('⚠️ Speech error: '+e.error+' — retrying...');
     }}
